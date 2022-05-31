@@ -6,6 +6,7 @@ Right now, this class contains the copy of the randomPlayer. But you have to cha
 '''
 
 from time import time
+import math
 
 from chess import _BoardState
 from sklearn.utils import shuffle
@@ -52,7 +53,7 @@ class myPlayer(PlayerInterface):
             return "PASS" 
         #moves = self._board.legal_moves() # Dont use weak_legal_moves() here!
         #move = choice(moves) 
-        move = self.choose_action()
+        move = self.takeMove()
         self._board.push(move)
 
         # New here: allows to consider internal representations of moves
@@ -78,62 +79,74 @@ class myPlayer(PlayerInterface):
             print("I lost :(!!")
 
     
-    def choose_action(self):
+    def takeMove(self):
+        #starting with depth = 1
         depth = 1   
         self.begin = time()
-        (eval_score, selected_action) = (-1, -1)
+        (score, move) = (-1, -1)
         while(True):
-            tmp_time = time()
-            self.transposition_table = {}
-            #new_score, new_action = self.alphabeta(depth, True, float('-inf'), float('+inf'))
-            new_score, new_action = self.minimax(depth, True)
-            if (time()-self.begin < self.timeOut):
-                (eval_score, selected_action) = (new_score, new_action)
-            print("MINIMAX AB ID(%d) : eval=%f, action=%d, time=%s" % (depth, eval_score, selected_action, time()-tmp_time))
-            if (time()-self.begin >= self.timeOut):
+            now = time()
+            #self.transposition_table = {}            
+            bestScore, bestMove = self.alphabeta(depth, True)
+            if (time() - self.begin < self.timeOut):
+                (score, move) = (bestScore, bestMove)
+            print("ALPHABETA AB ID(%d) : eval=%f, action=%d, time=%s" % (depth, score, move, time() - now))
+            if (time() - self.begin >= self.timeOut):
                 break
-            depth+=1
-        return selected_action
+            depth += 1
+        return move
 
 
-    """
-    def alphabeta(self, depth, player, alpha, betha):
+    
+    def alphabeta(self, depth, player, alpha = -math.inf, betha = math.inf):
         now = time()
         if depth == 0 or (now - self.begin >= self.timeOut) or self._board.is_game_over():
             result = (self.eval(), None)    
             return result
-        legalMoves = [self._board.generate_legal_moves()]
-        shuffle(legalMoves)        
-        bestMove= -1
+        legalMoves = list(self._board.generate_legal_moves())
+        shuffle(legalMoves)                
         moveTargets = []        
         if player:            
-            bestValue = -999999
+            bestValue = -math.inf
+            moves = []
             for move in legalMoves:
                 self._board.push(move)
                 result = self.alphabeta(depth - 1, not player, alpha, betha)
-                value, move = max(result[0], value), result[1]                
+                #value, child_move = max(result[0], value), result[1]                
+                value = result[0]
                 self._board.pop()
-                if value >= betha:
-                    break
-                alpha = max(alpha, value)            
-            return (value, move)
+                if value > bestValue:
+                    bestValue = value
+                    moves.clear()
+                    moves.append(move)
+                    alpha = max(bestValue, alpha)
+                    if betha <= alpha:
+                        break     
+            bestMove = choice(moves)              
+            return (bestValue, bestMove)
         else:
-            bestValue = 999999
+            bestValue = math.inf
+            moves = []
             for move in legalMoves:
                 self._board.push(move)
                 result = self.alphabeta(depth - 1, not player, alpha, betha)
-                value, move = min(result[0], value), result[1]
+                #value, move = min(result[0], value), result[1]
+                value = result[0]
                 self._board.pop()
-                if value <= alpha:
-                    break
-                betha = min(betha, value)
-            return (value, move)
-    """
+                if value < bestValue:
+                    bestValue = value
+                    moves.clear()
+                    moves.append(move)
+                    betha = min(bestValue, betha)
+                    if betha <= alpha:
+                        break
+            bestMove = choice(moves)
+            return (bestValue, bestMove)
+    
 
-    def minimax(self, depth, player):
-        now = time()
-        if depth == 0 or (now - self.begin >= self.timeOut) or self._board.is_game_over():            
-            return (self.eval(), None)
+    def minimax(self, depth, player):        
+        if depth == 0 or self._board.is_game_over():            
+            return (self.nativeEval(), None)
         legalMoves = list(self._board.generate_legal_moves())
         shuffle(legalMoves)                
         if player:            
@@ -162,6 +175,12 @@ class myPlayer(PlayerInterface):
                 elif value == bestValue:
                     bestMoves.append(move)                                  
             return (bestValue, choice(bestMoves))
+
+
+
+    def nativeEval(self):
+        return self._board.compute_score()[self._mycolor] - self._board.compute_score()[1 - self._mycolor]
+
 
     def eval(self):       
         pieceScore = 0
