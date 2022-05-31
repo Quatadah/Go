@@ -179,7 +179,7 @@ class myPlayer(PlayerInterface):
     def nativeEval(self):
         return self._board.compute_score()[self._mycolor] - self._board.compute_score()[1 - self._mycolor]
 
-
+    '''
     def eval(self):       
         pieceScore = 0
         if self._board.next_player() == self._board._BLACK:
@@ -212,6 +212,36 @@ class myPlayer(PlayerInterface):
 
         
         return pieceScore * normal(1, 0.1) + score * normal(1, 0.1) + liberties * normal(1, 0.1)
-      
-     def eval2(self):
-        pass
+    '''     
+    def eval(self):
+        black, white, _ = self._board._count_areas()
+        score = black - white
+        for x in range(3,5):
+            for y in range(4,6):
+                n = self._board.flatten((x,y))
+                if self._board[n] == self._mycolor:
+                    score += 10
+                elif self._board[n] == 1-self._mycolor:
+                    score -= 10
+        for x in range(9):
+            for y in range(9):
+                t = 0
+                for i in range(x-1,x+2):
+                    for j in range(y-1,y+2):
+                        my_color, not_my_color = 0, 0
+                        n = self._board.flatten((i,j))
+                        if self._board[(i,j)] == self._mycolor:
+                            my_color += 1
+                        elif self._board[(i,j)] == 1- self._mycolor:
+                            not_my_color += 1
+                        t += 1
+                if my_color > not_my_color:
+                    score += 50
+                elif my_color <= not_my_color:
+                    score -= 100
+                if my_color > 6:
+                    score += 150 
+                if not_my_color > 6:
+                    score -= 150
+        
+        return score
