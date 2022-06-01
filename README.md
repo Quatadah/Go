@@ -22,21 +22,21 @@ Nous pourrions aussi prendre des décisions en utilisant le modèle CNN pour év
 
 ## Joeurs
 
-MonteCarloPlayer.py : suit l'algorithme de Monte Carlo.
-MiniMaxPlayer.py : utilise l'algorithme minimax pour le parcours de l'arbre de recherche.
-myPlayer.py: utilise l'algorithme alphabeta.
+- MonteCarloPlayer.py : suit l'algorithme de Monte Carlo.
+- MiniMaxPlayer.py : utilise l'algorithme minimax pour le parcours de l'arbre de recherche.
+- myPlayer.py: utilise l'algorithme alphabeta.
 
 
 ## EXEMPLES DE LIGNES DE COMMANDES:
 
-python3 localGame.py
+- python3 localGame.py
 --> Va lancer un match myPlayer.py contre myPlayer.py
 
-python3 namedGame.py myPlayer.py randomPlayer.py
+- python3 namedGame.py myPlayer.py randomPlayer.py
 --> Va lancer un match entre votre joueur (NOIRS) et le randomPlayer
  (BLANC)
 
-python3 namedGame.py gnugoPlayer.py myPlayer.py
+- python3 namedGame.py gnugoPlayer.py myPlayer.py
  --> gnugo (level 0) contre votre joueur (très dur à battre)
 
 
