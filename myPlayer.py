@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
-''' This is the file you have to modify for the tournament. Your default AI player must be called by this module, in the
-myPlayer class.
-
-Right now, this class contains the copy of the randomPlayer. But you have to change this!
+# -*- coding: utf-8 -*-
 '''
-
+@authors:
+    - NASDAMI Quatadah
+    - LAMHAMDI Aymane
+'''
 from time import time
 import math
 
