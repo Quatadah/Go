@@ -12,7 +12,6 @@ from chess import _BoardState
 from sklearn.utils import shuffle
 import Goban 
 from random import choice
-from numpy.random import normal
 from playerInterface import *
 
 class myPlayer(PlayerInterface):
@@ -22,6 +21,9 @@ class myPlayer(PlayerInterface):
 
     '''
     def setBoardScores(self):
+        """
+            Position scores for evaluation
+        """
         return [
             0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 2, 2, 2, 1, 2, 2, 2, 0,
@@ -41,9 +43,11 @@ class myPlayer(PlayerInterface):
         self.scores = self.setBoardScores()
 
         self._mycolor = None
-        self.timeOut = 4
+        self.timeOut = 5
         self.begin = 0
         
+        self.transpositionTable = {}
+
     def getPlayerName(self):
         return "IAMANIA"
 
@@ -82,54 +86,64 @@ class myPlayer(PlayerInterface):
     def takeMove(self):
         #starting with depth = 1
         depth = 1   
-        self.begin = time()
+        self.begin = time()        
         (score, move) = (-1, -1)
         while(True):
             now = time()
-            #self.transposition_table = {}            
-            bestScore, bestMove = self.alphabeta(depth, True)
+            self.transpositionTable = {}            
+            bestScore, bestMove = self.alphabetha(depth, True)
             if (time() - self.begin < self.timeOut):
-                (score, move) = (bestScore, bestMove)
-            print("ALPHABETA AB ID(%d) : eval=%f, action=%d, time=%s" % (depth, score, move, time() - now))
-            if (time() - self.begin >= self.timeOut):
+                (score, move) = (bestScore, bestMove)       
+                print("evaluation score : ", score)
+            print("ALPHABETA LEVEL(%d) : eval=%f, move=%d, time=%s" % (depth, score, move, time() - now))
+            if (time() - self.begin >= self.timeOut):                
                 break
             depth += 1
         return move
 
 
     
-    def alphabeta(self, depth, player, alpha = -math.inf, betha = math.inf):
+    def alphabetha(self, depth, player, alpha = -math.inf, betha = math.inf):                
+        t = self.transpositionTable.get(str(self._board._currentHash))        
+        if t != None:
+            return t
         now = time()
         if depth == 0 or (now - self.begin >= self.timeOut) or self._board.is_game_over():
             result = (self.eval(), None)    
-            return result
-        legalMoves = list(self._board.generate_legal_moves())
+            self.transpositionTable.update({str(self._board._currentHash): result})
+            return result            
+        #legalMoves = list(self._board.generate_legal_moves())
+        legalMoves = self._board.weak_legal_moves()
         shuffle(legalMoves)                
         moveTargets = []        
         if player:            
             bestValue = -math.inf
             moves = []
-            for move in legalMoves:
-                self._board.push(move)
-                result = self.alphabeta(depth - 1, not player, alpha, betha)
+            for move in legalMoves:                
+                isLegal = self._board.push(move)                                
+                if not isLegal:
+                    self._board.pop()
+                    continue
+                result = self.alphabetha(depth - 1, not player, alpha, betha)
                 #value, child_move = max(result[0], value), result[1]                
                 value = result[0]
                 self._board.pop()
                 if value > bestValue:
-                    bestValue = value
+                    bestValue = value                    
                     moves.clear()
                     moves.append(move)
                     alpha = max(bestValue, alpha)
                     if betha <= alpha:
                         break     
-            bestMove = choice(moves)              
+            bestMove = choice(moves)         
+            self.transpositionTable.update({str(self._board._currentHash): (bestValue, bestMove)})                 
             return (bestValue, bestMove)
         else:
             bestValue = math.inf
             moves = []
             for move in legalMoves:
                 self._board.push(move)
-                result = self.alphabeta(depth - 1, not player, alpha, betha)
+                result = self.alphabetha(depth - 1, not player, alpha, betha)
                 #value, move = min(result[0], value), result[1]
                 value = result[0]
                 self._board.pop()
@@ -141,42 +155,15 @@ class myPlayer(PlayerInterface):
                     if betha <= alpha:
                         break
             bestMove = choice(moves)
+            self.transpositionTable.update({str(self._board._currentHash): (bestValue, bestMove)})     
             return (bestValue, bestMove)
-    
 
-    def minimax(self, depth, player):        
-        if depth == 0 or self._board.is_game_over():            
-            return (self.nativeEval(), None)
-        legalMoves = list(self._board.generate_legal_moves())
-        shuffle(legalMoves)                
-        if player:            
-            bestMoves = []
-            bestValue = -999999
-            for move in legalMoves:
-                self._board.push(move)
-                value = self.minimax(depth - 1, not player)[0]
-                self._board.pop()
-                if (value > bestValue):
-                    bestValue = value            
-                    bestMoves.append(move)
-                elif value == bestValue:
-                    bestMoves.append(move)
-            return (bestValue, choice(bestMoves))
+    def anotherEval(self):
+        if self._mycolor == self._board._WHITE:
+            v = (self._board._nbWHITE * 1. / (self.boardSize * self.boardSize + 1 - len(self._board._empties))) * 1000
         else:
-            bestMoves = []
-            bestValue = 999999
-            for move in legalMoves:
-                self._board.push(move)                
-                value = self.minimax(depth - 1, not player)[0]
-                self._board.pop()
-                if (value < bestValue):
-                    bestValue = value     
-                    bestMoves.append(move)    
-                elif value == bestValue:
-                    bestMoves.append(move)                                  
-            return (bestValue, choice(bestMoves))
-
-
+            v = (self._board._nbBLACK * 1. / (self.boardSize * self.boardSize + 1 - len(self._board._empties))) * 1000
+        return v
 
     def nativeEval(self):
         return self._board.compute_score()[self._mycolor] - self._board.compute_score()[1 - self._mycolor]
@@ -184,7 +171,7 @@ class myPlayer(PlayerInterface):
 
     def eval(self):       
         pieceScore = 0
-        if self._board.next_player() == self._board._BLACK:
+        if self._mycolor == self._board._WHITE:
             pieceScore += (self._board._nbWHITE - self._board._nbBLACK) * 3 # score for white
         else:
             pieceScore += (self._board._nbBLACK - self._board._nbWHITE) * 3 # score for black
@@ -213,4 +200,4 @@ class myPlayer(PlayerInterface):
             score *= -1
 
         
-        return pieceScore * normal(1, 0.1) + score * normal(1, 0.1) + liberties * normal(1, 0.1)
+        return pieceScore / 3 + score / 3 + liberties / 3
