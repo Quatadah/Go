@@ -8,11 +8,11 @@ Right now, this class contains the copy of the randomPlayer. But you have to cha
 from time import time
 import math
 
-from chess import _BoardState
 from sklearn.utils import shuffle
 import Goban 
 from random import choice
 from playerInterface import *
+from numpy.random import normal
 
 class myPlayer(PlayerInterface):
     ''' Example of a random player for the go. The only tricky part is to be able to handle
@@ -43,7 +43,7 @@ class myPlayer(PlayerInterface):
         self.scores = self.setBoardScores()
 
         self._mycolor = None
-        self.timeOut = 5
+        self.timeOut = 7
         self.begin = 0
         
         self.transpositionTable = {}
@@ -171,6 +171,18 @@ class myPlayer(PlayerInterface):
 
     def eval(self):       
         pieceScore = 0
+        if self._board.is_game_over():
+            final_giga_score = 999999999999
+            final_result = self._board.result()
+
+            if self._mycolor == self._board._BLACK: final_giga_score *= -1
+
+            if final_result == "1-0": # WHITE wins
+                return final_giga_score
+            elif final_result == "0-1": # BLACK wins
+                return -final_giga_score
+            elif final_result == "1/2-1/2":
+                return 0
         if self._mycolor == self._board._WHITE:
             pieceScore += (self._board._nbWHITE - self._board._nbBLACK) * 3 # score for white
         else:
@@ -199,5 +211,4 @@ class myPlayer(PlayerInterface):
             liberties *= -1
             score *= -1
 
-        
-        return pieceScore / 3 + score / 3 + liberties / 3
+        return pieceScore * normal(1, 0.1) + score * normal(1, 0.1) + liberties * normal(1, 0.1)        
