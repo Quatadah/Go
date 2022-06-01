@@ -8,11 +8,9 @@ Right now, this class contains the copy of the randomPlayer. But you have to cha
 from time import time
 import math
 
-from chess import BLACK, WHITE, _BoardState
-from sklearn.utils import shuffle
 import Goban 
+from sklearn.utils import shuffle
 from random import choice
-from numpy.random import normal
 from playerInterface import *
 
 class myPlayer(PlayerInterface):
@@ -41,7 +39,7 @@ class myPlayer(PlayerInterface):
         self.scores = self.setBoardScores()
 
         self._mycolor = None
-        self.timeOut = 4
+        self.timeOut = 7
         self.begin = 0
         
     def getPlayerName(self):
@@ -90,7 +88,7 @@ class myPlayer(PlayerInterface):
             bestScore, bestMove = self.alphabeta_montecarlo(depth, True)
             if (time() - self.begin < self.timeOut):
                 (score, move) = (bestScore, bestMove)
-            print("ALPHABETA AB ID(%d) : eval=%f, action=%d, time=%s" % (depth, score, move, time() - now))
+            print("MONTECARLO LEVEL(%d) : eval=%f executed in %s" % (depth, score, time() - now))
             if (time() - self.begin >= self.timeOut):
                 break
             depth += 1
@@ -189,7 +187,7 @@ class myPlayer(PlayerInterface):
             final_giga_score = 999999999999
             final_result = self._board.result()
 
-            if self._mycolor == BLACK: final_giga_score *= -1
+            if self._mycolor == self._board._BLACK: final_giga_score *= -1
 
             if final_result == "1-0": # WHITE wins
                 return final_giga_score
@@ -227,17 +225,17 @@ class myPlayer(PlayerInterface):
             score *= -1
 
         
-        return pieceScore * normal(1, 0.1) + score * normal(1, 0.1) + liberties * normal(1, 0.1)
+        return pieceScore  + score  + liberties 
     
     def montecarlo(self, nb_games):
         score = 0
         for i in range(nb_games):
-            score += eval(self)
+            score += self.eval()
         score /= nb_games
 
         return score
 
-    def alphabeta_montecarlo(self, depth, player, alpha = -math.inf, betha = math.inf, nb_games=50):
+    def alphabeta_montecarlo(self, depth, player, alpha = -math.inf, betha = math.inf, nb_games=40):
         now = time()
         if depth == 0 or (now - self.begin >= self.timeOut) or self._board.is_game_over():
             result = (self.montecarlo(nb_games), None)    

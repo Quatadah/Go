@@ -20,9 +20,6 @@ class myPlayer(PlayerInterface):
 
     '''
     def setBoardScores(self):
-        """
-            Position scores for evaluation
-        """
         return [
             0, 0, 0, 0, 0, 0, 0, 0, 0,
             0, 2, 2, 2, 1, 2, 2, 2, 0,
@@ -42,7 +39,7 @@ class myPlayer(PlayerInterface):
         self.scores = self.setBoardScores()
 
         self._mycolor = None
-        self.timeOut = 7
+        self.timeOut = 8
         self.begin = 0
         
         self.transpositionTable = {}
@@ -90,27 +87,21 @@ class myPlayer(PlayerInterface):
         while(True):
             now = time()
             self.transpositionTable = {}            
-            bestScore, bestMove = self.alphabetha(depth, True)
+            bestScore, bestMove = self.minimax(1, True)
             if (time() - self.begin < self.timeOut):
-                (score, move) = (bestScore, bestMove)       
-                print("evaluation score : ", score)
-            print("ALPHABETA LEVEL(%d) : eval=%f executed in %s" % (depth, score, time() - now))
+                (score, move) = (bestScore, bestMove)                       
+            print("MINIMAX LEVEL(%d) : eval=%f : executed in %s" % (depth, score, time() - now))
             if (time() - self.begin >= self.timeOut):                
                 break
-            depth += 1
+            #depth += 1
         return move
 
 
-    
-    def alphabetha(self, depth, player, alpha = -math.inf, betha = math.inf):                
-        t = self.transpositionTable.get(str(self._board._currentHash))        
-        if t != None:
-            return t
+    def minimax(self, depth, player):
         now = time()
         if depth == 0 or (now - self.begin >= self.timeOut) or self._board.is_game_over():
             result = (self.eval(), None)    
-            self.transpositionTable.update({str(self._board._currentHash): result})
-            return result            
+            return result
         #legalMoves = list(self._board.generate_legal_moves())
         legalMoves = self._board.weak_legal_moves()
         shuffle(legalMoves)                
@@ -118,43 +109,35 @@ class myPlayer(PlayerInterface):
         if player:            
             bestValue = -math.inf
             moves = []
-            for move in legalMoves:                
-                isLegal = self._board.push(move)                                
+            for move in legalMoves:
+                isLegal = self._board.push(move)
                 if not isLegal:
                     self._board.pop()
                     continue
-                result = self.alphabetha(depth - 1, not player, alpha, betha)
+                result = self.minimax(depth - 1, not player)
                 #value, child_move = max(result[0], value), result[1]                
                 value = result[0]
                 self._board.pop()
                 if value > bestValue:
-                    bestValue = value                    
+                    bestValue = value
                     moves.clear()
-                    moves.append(move)
-                    alpha = max(bestValue, alpha)
-                    if betha <= alpha:
-                        break     
-            bestMove = choice(moves)         
-            self.transpositionTable.update({str(self._board._currentHash): (bestValue, bestMove)})                 
+                    moves.append(move)                   
+            bestMove = choice(moves)              
             return (bestValue, bestMove)
         else:
             bestValue = math.inf
             moves = []
             for move in legalMoves:
                 self._board.push(move)
-                result = self.alphabetha(depth - 1, not player, alpha, betha)
+                result = self.minimax(depth - 1, not player)
                 #value, move = min(result[0], value), result[1]
                 value = result[0]
                 self._board.pop()
                 if value < bestValue:
                     bestValue = value
                     moves.clear()
-                    moves.append(move)
-                    betha = min(bestValue, betha)
-                    if betha <= alpha:
-                        break
+                    moves.append(move)                    
             bestMove = choice(moves)
-            self.transpositionTable.update({str(self._board._currentHash): (bestValue, bestMove)})     
             return (bestValue, bestMove)
 
     def anotherEval(self):
@@ -170,18 +153,6 @@ class myPlayer(PlayerInterface):
 
     def eval(self):       
         pieceScore = 0
-        if self._board.is_game_over():
-            final_giga_score = 999999999999
-            final_result = self._board.result()
-
-            if self._mycolor == self._board._BLACK: final_giga_score *= -1
-
-            if final_result == "1-0": # WHITE wins
-                return final_giga_score
-            elif final_result == "0-1": # BLACK wins
-                return -final_giga_score
-            elif final_result == "1/2-1/2":
-                return 0
         if self._mycolor == self._board._WHITE:
             pieceScore += (self._board._nbWHITE - self._board._nbBLACK) * 3 # score for white
         else:
@@ -210,4 +181,5 @@ class myPlayer(PlayerInterface):
             liberties *= -1
             score *= -1
 
-        return pieceScore + score + liberties
+        
+        return pieceScore + score  + liberties
